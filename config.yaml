@@ -1,0 +1,5 @@
+FLASK:
+    DEBUG: True
+    DATABASE: 'db/flaskr.db'
+    USERNAME: 'admin'
+    PASSWORD: 'default'

@@ -2,11 +2,22 @@ import os
 import sqlite3
 from flask import Flask, request, session, g, redirect, url_for, abort, \
      render_template, flash
+from werkzeug.utils import secure_filename
+
 
 DATABASE = 'db/flaskr.db'
+SECRET_KEY = 'development key'
+USERNAME = 'admin'
+PASSWORD = 'default'
+UPLOAD_FOLDER = 'data'
+ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
+
 DEBUG = True
 
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+
 # environment config
 app.config.from_object(__name__)
 
@@ -52,6 +63,7 @@ def show_entries():
 def add_entry():
     if not session.get('logged_in'):
         abort(401)
+    g.db = get_db()
     g.db.execute('insert into entries (title, text) values (?, ?)',
                  [request.form['title'], request.form['text']])
     g.db.commit()
@@ -78,6 +90,29 @@ def logout():
     flash('You were logged out')
     return redirect(url_for('show_entries'))
 
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
+
+@app.route('/upload', methods=['GET', 'POST'])
+def upload_file():
+    if request.method == 'POST':
+        file = request.files['file']
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            return redirect(url_for('uploaded_file',
+                                    filename=filename))
+    return '''
+    <!doctype html>
+    <title>Upload new File</title>
+    <h1>Upload new File</h1>
+    <form action="" method=post enctype=multipart/form-data>
+      <p><input type=file name=file>
+         <input type=submit value=Upload>
+    </form>
+    '''
 
 
 if __name__ == '__main__':
